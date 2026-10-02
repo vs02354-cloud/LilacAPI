@@ -84,6 +84,7 @@ namespace LilacTechSys.Application.Interfaces
     public interface IDashboardService
     {
         Task<ApiResponse<DashboardStatsDto>> GetDashboardStatsAsync();
+        Task<ApiResponse> UpdateSubmissionStageAsync(string type, Guid id, string newStage);
     }
 
     public interface IFileStorageService

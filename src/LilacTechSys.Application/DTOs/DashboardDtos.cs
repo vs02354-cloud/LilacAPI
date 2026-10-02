@@ -36,6 +36,7 @@ namespace LilacTechSys.Application.DTOs
         public int StatusCode { get; set; }
         public string Priority { get; set; } = string.Empty; // "High", "Medium", "Normal"
         public string BudgetOrScope { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
         public bool IsToday { get; set; }
     }

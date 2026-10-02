@@ -87,12 +87,13 @@ namespace LilacTechSys.Application.Services
                     StatusCode = (int)q.Status,
                     Priority = priority,
                     BudgetOrScope = q.BudgetRange ?? "$10k - $25k",
+                    Message = q.ProjectDescription ?? "",
                     CreatedAt = q.CreatedAt,
                     IsToday = isToday
                 });
             }
 
-            // 2. Process Inquiries
+            // 2. Process Inquiries (Send an Inquiry submissions)
             foreach (var m in allInquiries)
             {
                 var isToday = m.CreatedAt.Date == todayUtc;
@@ -115,7 +116,8 @@ namespace LilacTechSys.Application.Services
                     SpecificStatus = m.IsRead ? (m.RespondedAt != null ? "Responded" : "In Review") : "Unread",
                     StatusCode = m.IsRead ? 1 : 0,
                     Priority = "Normal",
-                    BudgetOrScope = m.Message.Length > 50 ? m.Message[..50] + "..." : m.Message,
+                    BudgetOrScope = m.Message.Length > 60 ? m.Message[..60] + "..." : m.Message,
+                    Message = m.Message,
                     CreatedAt = m.CreatedAt,
                     IsToday = isToday
                 });
@@ -145,6 +147,7 @@ namespace LilacTechSys.Application.Services
                     StatusCode = (int)a.Status,
                     Priority = "Normal",
                     BudgetOrScope = a.ResumeFileName ?? "Resume.pdf",
+                    Message = $"Application for: {a.JobOpening?.Title ?? "Position"}. Resume: {a.ResumeFileName}",
                     CreatedAt = a.CreatedAt,
                     IsToday = isToday
                 });

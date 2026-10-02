@@ -117,5 +117,14 @@ namespace LilacTechSys.Tests
             Assert.False(string.IsNullOrWhiteSpace(refreshToken));
             Assert.True(refreshToken.Length > 20);
         }
+
+        [Fact]
+        public async System.Threading.Tasks.Task SupabasePoolerConnection_ShouldConnectSuccessfully()
+        {
+            var connStr = "Host=aws-0-ap-northeast-2.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.ruhozpbikwpppcdqnhbo;Password=Ajsspc@9910;SSL Mode=Require;Trust Server Certificate=true;Timeout=10;";
+            using var conn = new Npgsql.NpgsqlConnection(connStr);
+            await conn.OpenAsync();
+            Assert.Equal(System.Data.ConnectionState.Open, conn.State);
+        }
     }
 }

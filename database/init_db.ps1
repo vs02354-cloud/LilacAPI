@@ -2,9 +2,9 @@
 param(
     [string]$HostName = "127.0.0.1",
     [string]$Port = "5432",
-    [string]$Database = "lilactechsys",
+    [string]$Database = "lilactechsys_database",
     [string]$Username = "postgres",
-    [string]$Password = "postgres"
+    [string]$Password = "Vish@12345"
 )
 
 $env:PGPASSWORD = $Password

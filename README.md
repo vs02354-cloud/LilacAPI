@@ -81,9 +81,21 @@ All endpoints are versioned under `/api/v1/`:
 - [PostgreSQL 16+](https://www.postgresql.org/download/) running on `localhost:5432`
 
 ### 2. Database Setup
-Create database `lilactechsys` in PostgreSQL:
+
+#### Option A: Automatic via EF Core (Code-First)
+The API automatically creates and seeds the PostgreSQL database on first launch:
 ```sql
 CREATE DATABASE lilactechsys;
+```
+
+#### Option B: Standalone SQL Script (Database-First)
+You can directly run the provided PostgreSQL schema and seed script located in `database/lilactechsys_database.sql`:
+```bash
+# Using PowerShell automation script:
+powershell -ExecutionPolicy Bypass -File database/init_db.ps1
+
+# Or manually via psql CLI:
+psql -h 127.0.0.1 -p 5432 -U postgres -d lilactechsys -f database/lilactechsys_database.sql
 ```
 
 Update `src/LilacTechSys.Api/appsettings.json` if your PostgreSQL username or password differs from default `postgres/postgres`:

@@ -21,13 +21,15 @@ namespace LilacTechSys.Api.Controllers
         public async Task<IActionResult> CheckHealth()
         {
             var dbHealthy = false;
+            string? dbError = null;
             try
             {
                 dbHealthy = await _context.Database.CanConnectAsync();
             }
-            catch
+            catch (Exception ex)
             {
                 dbHealthy = false;
+                dbError = ex.Message + (ex.InnerException != null ? $" -> {ex.InnerException.Message}" : "");
             }
 
             return Ok(new
@@ -36,7 +38,8 @@ namespace LilacTechSys.Api.Controllers
                 system = "LilacTechSys Web API",
                 version = "1.0.0",
                 timestamp = DateTime.UtcNow,
-                database = dbHealthy ? "Connected" : "Disconnected"
+                database = dbHealthy ? "Connected" : "Disconnected",
+                databaseError = dbError
             });
         }
     }

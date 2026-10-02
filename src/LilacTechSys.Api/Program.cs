@@ -43,6 +43,15 @@ var rawConnectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
 
 var connectionString = ParseDatabaseUrl(rawConnectionString);
 
+// Safe diagnostic logging (mask password)
+var maskedConnStr = System.Text.RegularExpressions.Regex.Replace(connectionString, @"Password=[^;]+", "Password=******");
+Log.Information("Configured database connection: {ConnectionString}", maskedConnStr);
+
+if (connectionString.Contains("Host=127.0.0.1") && !builder.Environment.IsDevelopment())
+{
+    Log.Warning("Running in non-development environment with localhost database! Set DATABASE_URL environment variable on Render.");
+}
+
 builder.Services.AddDbContext<LilacDbContext>(options =>
     options.UseNpgsql(connectionString, b => b.MigrationsAssembly("LilacTechSys.Infrastructure")));
 builder.Services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<LilacDbContext>());
@@ -212,24 +221,60 @@ app.Run();
 static string ParseDatabaseUrl(string connStr)
 {
     if (string.IsNullOrWhiteSpace(connStr)) return string.Empty;
+
     if (!connStr.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) &&
         !connStr.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
-        return connStr;
+    {
+        // Append SSL and error detail if not already specified
+        var res = connStr;
+        if (!res.Contains("Trust Server Certificate", StringComparison.OrdinalIgnoreCase))
+            res += ";Trust Server Certificate=true";
+        if (!res.Contains("Include Error Detail", StringComparison.OrdinalIgnoreCase))
+            res += ";Include Error Detail=true";
+        return res;
+    }
 
     try
     {
-        var uri = new Uri(connStr);
-        var userInfo = uri.UserInfo.Split(':');
-        var user = userInfo[0];
-        var password = userInfo.Length > 1 ? userInfo[1] : "";
-        var host = uri.Host;
-        var port = uri.Port > 0 ? uri.Port : 5432;
-        var database = uri.AbsolutePath.TrimStart('/');
+        // Strip scheme (postgres:// or postgresql://)
+        var schemeIdx = connStr.IndexOf("://", StringComparison.Ordinal);
+        var rest = connStr.Substring(schemeIdx + 3);
 
-        return $"Host={host};Port={port};Database={database};Username={user};Password={password};SSL Mode=Require;Trust Server Certificate=true;";
+        // Strip query parameters (?sslmode=require, etc.)
+        var queryIdx = rest.IndexOf('?');
+        var main = queryIdx >= 0 ? rest.Substring(0, queryIdx) : rest;
+
+        // The last '@' strictly separates credentials from host:port/database
+        var atIdx = main.LastIndexOf('@');
+        if (atIdx < 0) return connStr;
+
+        var userInfo = main.Substring(0, atIdx);
+        var hostDb = main.Substring(atIdx + 1);
+
+        // First ':' in userInfo separates username from password
+        var colonIdx = userInfo.IndexOf(':');
+        var user = colonIdx >= 0 ? Uri.UnescapeDataString(userInfo.Substring(0, colonIdx)) : Uri.UnescapeDataString(userInfo);
+        var password = colonIdx >= 0 ? Uri.UnescapeDataString(userInfo.Substring(colonIdx + 1)) : "";
+
+        // First '/' in hostDb separates host[:port] from database
+        var slashIdx = hostDb.IndexOf('/');
+        var hostPort = slashIdx >= 0 ? hostDb.Substring(0, slashIdx) : hostDb;
+        var database = slashIdx >= 0 ? hostDb.Substring(slashIdx + 1) : "";
+
+        var port = 5432;
+        var host = hostPort;
+        var hpColonIdx = hostPort.LastIndexOf(':');
+        if (hpColonIdx >= 0 && int.TryParse(hostPort.Substring(hpColonIdx + 1), out var parsedPort))
+        {
+            port = parsedPort;
+            host = hostPort.Substring(0, hpColonIdx);
+        }
+
+        return $"Host={host};Port={port};Database={database};Username={user};Password={password};SSL Mode=Prefer;Trust Server Certificate=true;Include Error Detail=true;";
     }
     catch
     {
         return connStr;
     }
 }
+

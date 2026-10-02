@@ -37,9 +37,25 @@ namespace LilacTechSys.Api.Middleware
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
+            var errors = new System.Collections.Generic.List<string>();
+            var current = exception;
+            while (current != null)
+            {
+                if (!string.IsNullOrWhiteSpace(current.Message) && !errors.Contains(current.Message))
+                {
+                    errors.Add(current.Message);
+                }
+                current = current.InnerException;
+            }
+
+            if (errors.Count == 0)
+            {
+                errors.Add("An unknown internal server exception occurred.");
+            }
+
             var response = ApiResponse.ErrorResult(
                 "An unexpected server error occurred. Our engineering team has been alerted.",
-                new System.Collections.Generic.List<string> { exception.Message }
+                errors
             );
 
             var json = JsonSerializer.Serialize(response, new JsonSerializerOptions

@@ -127,6 +127,26 @@ dotnet run --project src/LilacTechSys.Api/LilacTechSys.Api.csproj
 
 ---
 
+## ☁️ Deployment on Render
+
+Render does not offer a native .NET 9 runtime, so deployment uses the included production-ready `Dockerfile` and `render.yaml`.
+
+### Render Service Settings:
+- **Environment / Runtime**: `Docker`
+- **Root Directory**: `.` (or leave empty if repo is just the backend)
+- **Dockerfile Path**: `./Dockerfile` (or `Dockerfile`)
+- **Docker Build Context**: `.`
+
+### Environment Variables on Render:
+| Variable | Value / Description |
+|---|---|
+| `PORT` | `10000` (Render defaults to this) |
+| `ASPNETCORE_ENVIRONMENT` | `Production` |
+| `DATABASE_URL` | Your PostgreSQL connection string or Render Postgres internal URL (e.g. `postgresql://user:password@hostname:5432/dbname`) |
+| `JWT_SECRET` | 32+ character random string |
+
+---
+
 ## 🔐 Default Admin Account
 
 - **Username**: `admin`
@@ -137,3 +157,4 @@ dotnet run --project src/LilacTechSys.Api/LilacTechSys.Api.csproj
 
 ## 📄 License
 Copyright © 2026 LilacTechSys. All rights reserved.
+

@@ -20,6 +20,13 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure port for Render or dynamic hosting
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
@@ -29,9 +36,12 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
-// Database configuration
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? "Host=127.0.0.1;Port=5432;Database=lilactechsys;Username=postgres;Password=postgres;";
+// Database configuration with Render/Cloud DATABASE_URL support
+var rawConnectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? "Host=127.0.0.1;Port=5432;Database=lilactechsys_database;Username=postgres;Password=postgres;";
+
+var connectionString = ParseDatabaseUrl(rawConnectionString);
 
 builder.Services.AddDbContext<LilacDbContext>(options =>
     options.UseNpgsql(connectionString, b => b.MigrationsAssembly("LilacTechSys.Infrastructure")));
@@ -58,7 +68,9 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
 
 // JWT Authentication
-var jwtSecret = builder.Configuration["JwtSettings:Secret"] ?? "LilacTechSysUltraSecureKeyForJwtTokenGeneration2026!#*99248572019";
+var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")
+    ?? builder.Configuration["JwtSettings:Secret"]
+    ?? "LilacTechSysUltraSecureKeyForJwtTokenGeneration2026!#*99248572019";
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "LilacTechSys.Api";
 var jwtAudience = builder.Configuration["JwtSettings:Audience"] ?? "LilacTechSys.Frontend";
 
@@ -91,7 +103,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000", "https://localhost:5173")
+        policy.SetIsOriginAllowed(_ => true)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -176,3 +188,28 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+static string ParseDatabaseUrl(string connStr)
+{
+    if (string.IsNullOrWhiteSpace(connStr)) return string.Empty;
+    if (!connStr.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) &&
+        !connStr.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+        return connStr;
+
+    try
+    {
+        var uri = new Uri(connStr);
+        var userInfo = uri.UserInfo.Split(':');
+        var user = userInfo[0];
+        var password = userInfo.Length > 1 ? userInfo[1] : "";
+        var host = uri.Host;
+        var port = uri.Port > 0 ? uri.Port : 5432;
+        var database = uri.AbsolutePath.TrimStart('/');
+
+        return $"Host={host};Port={port};Database={database};Username={user};Password={password};SSL Mode=Require;Trust Server Certificate=true;";
+    }
+    catch
+    {
+        return connStr;
+    }
+}

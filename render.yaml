@@ -15,4 +15,4 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: DATABASE_URL
-        sync: false
+        value: postgresql://postgres:Ajsspc@9910@db.ruhozpbikwpppcdqnhbo.supabase.co:5432/postgres

@@ -270,7 +270,10 @@ static string ParseDatabaseUrl(string connStr)
             host = hostPort.Substring(0, hpColonIdx);
         }
 
-        return $"Host={host};Port={port};Database={database};Username={user};Password={password};SSL Mode=Prefer;Trust Server Certificate=true;Include Error Detail=true;";
+        var isLocal = host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) || host.Equals("localhost", StringComparison.OrdinalIgnoreCase);
+        var sslMode = isLocal ? "Disable" : "Require";
+
+        return $"Host={host};Port={port};Database={database};Username={user};Password={password};SSL Mode={sslMode};Trust Server Certificate=true;Include Error Detail=true;";
     }
     catch
     {

@@ -120,16 +120,23 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "LilacTechSys API",
         Version = "v1",
-        Description = "RESTful API backend for LilacTechSys IT Solutions & Digital Services platform"
+        Description = "Production RESTful API backend for LilacTechSys IT Solutions, Digital Services & Admin Console",
+        Contact = new OpenApiContact
+        {
+            Name = "LilacTechSys Engineering",
+            Email = "contact@lilactechsys.com",
+            Url = new Uri("https://lilactechsys.com")
+        }
     });
 
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below.",
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
+        Scheme = "Bearer",
+        BearerFormat = "JWT"
     });
 
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -146,6 +153,14 @@ builder.Services.AddSwaggerGen(c =>
             Array.Empty<string>()
         }
     });
+
+    // Include XML comments if present
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (System.IO.File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath);
+    }
 });
 
 var app = builder.Build();
@@ -170,15 +185,20 @@ using (var scope = app.Services.CreateScope())
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 
-if (app.Environment.IsDevelopment() || true)
+// Always enable Swagger in both Development and Production for developer & admin access
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "LilacTechSys API v1");
-        c.RoutePrefix = "swagger";
-    });
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "LilacTechSys API v1");
+    c.RoutePrefix = "swagger";
+    c.DocumentTitle = "LilacTechSys API - Documentation";
+    c.EnablePersistAuthorization();
+    c.DisplayRequestDuration();
+    c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.List);
+});
+
+// Root path redirects directly to /swagger for convenient browser access
+app.MapGet("/", () => Results.Redirect("/swagger"));
 
 app.UseCors("AllowFrontend");
 
